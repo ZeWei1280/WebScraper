@@ -43,9 +43,9 @@ The program will generate CSV files in the specified output directory. These fil
 The program consists of several parts:
 
 * `main.go`: The entry point of the program which sets up the environment and starts the web scraping process.
+* `scraper.go`: Contains the `VisitAndScrapePage()` function for visiting web pages and the `scrapeSubpage()` function for scraping individual pages.
+* `csv_builder.go`: Defines the CSVBuilder type, which constructs the CSV files from the scraped data.
 * /utils:
     * `server.go`: Start a local HTTP which servers the data for scraper testing.
-    * `scraper.go`: Contains the `VisitAndScrapePage()` function for visiting web pages and the `scrapeSubpage()` function for scraping individual pages.
-    * `csv_builder.go`: Defines the CSVBuilder type, which constructs the CSV files from the scraped data.
     * `flags.go`: Handles the parsing of command-line flags.
     * `logger.go`: Log setting and management.

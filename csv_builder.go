@@ -39,19 +39,6 @@ func (b *CSVBuilder) AddFilePath(outputDir string) *CSVBuilder {
 	return b
 }
 
-func (b *CSVBuilder) BuildCSVFile() {
-	f, _ := os.Create(b.filePath + ".csv")
-	defer f.Close()
-	blankLine := b.separateData(make([]string, b.dataCols)) + "\n"
-
-	fmt.Fprintf(f, "%s%s%s%s%s",
-		b.header,
-		blankLine,
-		b.summary,
-		blankLine,
-		b.body)
-}
-
 func (b *CSVBuilder) AddHeader(code []string, date []string) *CSVBuilder {
 	b.header =
 		b.separator + b.separateData(code) + "\n" +
@@ -65,6 +52,19 @@ func (b *CSVBuilder) AddBodyAndSummary(body [][]string) *CSVBuilder {
 		b.body += b.separateData(row) + "\n"
 	}
 	return b.addFormula(len(body), len(body[0]))
+}
+
+func (b *CSVBuilder) BuildCSVFile() {
+	f, _ := os.Create(b.filePath + ".csv")
+	defer f.Close()
+	blankLine := b.separateData(make([]string, b.dataCols)) + "\n"
+
+	fmt.Fprintf(f, "%s%s%s%s%s",
+		b.header,
+		blankLine,
+		b.summary,
+		blankLine,
+		b.body)
 }
 
 func (b *CSVBuilder) addFormula(rows int, cols int) *CSVBuilder {
