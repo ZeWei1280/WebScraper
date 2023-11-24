@@ -5,9 +5,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
+
+const alphabetLength = 26
+const rowStart = 9
 
 type CSVBuilder struct {
 	fileName  string
@@ -15,15 +17,18 @@ type CSVBuilder struct {
 	separator string
 	header    string
 	body      string
-	summary   string
+	formula   string
 	dataCols  int
 	dataRows  int
 }
 
 func NewCSVBuilder() *CSVBuilder {
-	return &CSVBuilder{
-		separator: ";",
-	}
+	return &CSVBuilder{}
+}
+
+func (b *CSVBuilder) SetSeparator(s string) *CSVBuilder {
+	b.separator = s
+	return b
 }
 
 func (b *CSVBuilder) AddFileNameFromURL(pageURL string) *CSVBuilder {
@@ -40,31 +45,37 @@ func (b *CSVBuilder) AddFilePath(outputDir string) *CSVBuilder {
 }
 
 func (b *CSVBuilder) AddHeader(code []string, date []string) *CSVBuilder {
-	b.header =
-		b.separator + b.separateData(code) + "\n" +
-			b.separator + b.separateData(date) + "\n"
+	b.header = fmt.Sprintf("%s%s\n%s%s\n",
+		b.separator, b.separateData(code),
+		b.separator, b.separateData(date))
 
 	return b
 }
 
 func (b *CSVBuilder) AddBodyAndSummary(body [][]string) *CSVBuilder {
+	var builder strings.Builder
 	for _, row := range body {
-		b.body += b.separateData(row) + "\n"
+		builder.WriteString(b.separateData(row))
+		builder.WriteString("\n")
 	}
+	b.body = builder.String()
+
 	return b.addFormula(len(body), len(body[0]))
 }
 
 func (b *CSVBuilder) BuildCSVFile() {
 	f, _ := os.Create(b.filePath + ".csv")
 	defer f.Close()
-	blankLine := b.separateData(make([]string, b.dataCols)) + "\n"
+	blankRow := b.separateData(make([]string, b.dataCols))
 
-	fmt.Fprintf(f, "%s%s%s%s%s",
+	fmt.Fprintf(f, "%s%s\n%s%s\n%s",
 		b.header,
-		blankLine,
-		b.summary,
-		blankLine,
-		b.body)
+		blankRow,
+		b.formula,
+		blankRow,
+		b.body,
+	)
+
 }
 
 func (b *CSVBuilder) addFormula(rows int, cols int) *CSVBuilder {
@@ -78,21 +89,22 @@ func (b *CSVBuilder) addFormula(rows int, cols int) *CSVBuilder {
 	passRate[0] = "pass rate"
 
 	for i := 1; i < cols; i++ {
-		rowStart := 9
 		rowEnd := rowStart + rows - 1
 		col := num2CSVColumn(i + 1)
-		formulaRange := col + strconv.Itoa(rowStart) + ":" + col + strconv.Itoa(rowEnd)
+		formulaRange := fmt.Sprintf("%s%d:%s%d", col, rowStart, col, rowEnd)
 
-		pass[i] = "=SUM(" + formulaRange + ")"
-		fail[i] = "=COUNTIF(" + formulaRange + ",\"x\")"
-		total[i] = "=COUNTA(" + formulaRange + ")"
-		passRate[i] = "=IF(" + col + "6=0,\"N/A\"," + col + "5/" + col + "6)"
+		pass[i] = fmt.Sprintf("=SUM(%s)", formulaRange)
+		fail[i] = fmt.Sprintf("=COUNTIF(%s,\"x\")", formulaRange)
+		total[i] = fmt.Sprintf("=COUNTA(%s)", formulaRange)
+		passRate[i] = fmt.Sprintf("=IF(%s6=0,\"N/A\",%s5/%s6)", col, col, col)
 	}
 
-	b.summary = b.separateData(fail) + "\n" +
-		b.separateData(pass) + "\n" +
-		b.separateData(total) + "\n" +
-		b.separateData(passRate) + "\n"
+	b.formula = fmt.Sprintf("%s\n%s\n%s\n%s\n",
+		b.separateData(fail),
+		b.separateData(pass),
+		b.separateData(total),
+		b.separateData(passRate))
+
 	return b
 }
 
@@ -103,9 +115,9 @@ func (b *CSVBuilder) separateData(data []string) string {
 func num2CSVColumn(num int) string {
 	var res string
 	for num > 0 {
-		mod := (num - 1) % 26
+		mod := (num - 1) % alphabetLength
 		res = string(rune('A'+mod)) + res
-		num = (num - mod) / 26
+		num = (num - mod) / alphabetLength
 	}
 	return res
 }
