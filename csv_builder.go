@@ -25,57 +25,59 @@ type CSVBuilder struct {
 	dataRows int
 }
 
-func NewCSVBuilder() *CSVBuilder {
-	return &CSVBuilder{}
+func BuildCSVFile(pageURL string, outputDir string, body [][]string, code []string, date []string) {
+	csvBuilder := &CSVBuilder{}
+
+	csvBuilder.setFileNameFromURL(pageURL)
+	csvBuilder.setFilePath(outputDir)
+	csvBuilder.setHeader(code, date)
+	csvBuilder.setBody(body)
+	csvBuilder.setFormula(len(body), len(body[0]))
+
+	csvBuilder.build()
 }
 
-func (b *CSVBuilder) AddFileNameFromURL(pageURL string) *CSVBuilder {
+func (b *CSVBuilder) setFileNameFromURL(pageURL string) {
 	htmlFile := path.Base(pageURL)
 	b.fileName = strings.TrimSuffix(htmlFile, ".html")
-	return b
 }
 
-func (b *CSVBuilder) AddFilePath(outputDir string) *CSVBuilder {
+func (b *CSVBuilder) setFilePath(outputDir string) {
 	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
 		log.Fatalf("Fail to create directory %s: %v", outputDir, err)
 	}
 	b.filePath = filepath.Join(outputDir, b.fileName)
-	return b
 }
 
-func (b *CSVBuilder) AddHeader(code []string, date []string) *CSVBuilder {
-	b.header = fmt.Sprintf("%s%s\n%s%s\n",
-		separator, b.separateData(code),
-		separator, b.separateData(date))
-
-	return b
+func (b *CSVBuilder) setHeader(code []string, date []string) {
+	b.header =
+		separator + b.separateData(code) +
+			separator + b.separateData(date)
 }
 
-func (b *CSVBuilder) AddBodyAndSummary(body [][]string) *CSVBuilder {
+func (b *CSVBuilder) setBody(body [][]string) {
 	b.body = ""
 	for _, row := range body {
-		b.body += fmt.Sprintf("%s\n", b.separateData(row))
+		b.body += b.separateData(row)
 	}
-
-	return b.addFormula(len(body), len(body[0]))
 }
 
-func (b *CSVBuilder) BuildCSVFile() {
+func (b *CSVBuilder) build() {
 	f, _ := os.Create(b.filePath + ".csv")
 	defer f.Close()
 	blankRow := b.separateData(make([]string, b.dataCols))
 
-	fmt.Fprintf(f, "%s%s\n%s%s\n%s",
-		b.header,
-		blankRow,
-		b.formula,
-		blankRow,
-		b.body,
+	fmt.Fprintf(f,
+		b.header+
+			blankRow+
+			b.formula+
+			blankRow+
+			b.body,
 	)
 
 }
 
-func (b *CSVBuilder) addFormula(rows int, cols int) *CSVBuilder {
+func (b *CSVBuilder) setFormula(rows int, cols int) *CSVBuilder {
 	var pass = make([]string, cols)
 	var fail = make([]string, cols)
 	var total = make([]string, cols)
@@ -91,23 +93,37 @@ func (b *CSVBuilder) addFormula(rows int, cols int) *CSVBuilder {
 		formulaRange := fmt.Sprintf("%s%d:%s%d", col, rowStart, col, rowEnd)
 
 		pass[i] = fmt.Sprintf("=SUM(%s)", formulaRange)
-		fail[i] = fmt.Sprintf("=COUNTIF(%s,\"x\")", formulaRange)
+		fail[i] = fmt.Sprintf(`=COUNTIF(%s,"x")`, formulaRange)
 		total[i] = fmt.Sprintf("=COUNTA(%s)", formulaRange)
-		passRate[i] = fmt.Sprintf("=IF(%s6=0,\"N/A\",%s5/%s6)", col, col, col)
+		passRate[i] = fmt.Sprintf(`=IF(%s6=0,"N/A",%s5/%s6)`, col, col, col)
 	}
 
-	b.formula = fmt.Sprintf("%s\n%s\n%s\n%s\n",
-		b.separateData(fail),
-		b.separateData(pass),
-		b.separateData(total),
-		b.separateData(passRate))
+	b.formula =
+		b.separateData(fail) +
+			b.separateData(pass) +
+			b.separateData(total) +
+			b.separateData(passRate)
 
 	return b
 }
 
 func (b *CSVBuilder) separateData(data []string) string {
-	return strings.Join(data, separator)
+	return fmt.Sprintf("%s\n", strings.Join(data, separator))
 }
+
+type tableCell struct {
+	row    int
+	col    int
+	cellId string
+}
+
+//func NewTableCell(row int, col int) *tableCell {
+//	return &tableCell{
+//		row: row,
+//		col: col,
+//		cellId: num2CSVColumn(col),
+//	}
+//}
 
 func num2CSVColumn(num int) string {
 	var res string

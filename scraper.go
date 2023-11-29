@@ -80,13 +80,7 @@ func scrapeSubpage(pageURL string, outputDir string) {
 	}
 
 	// build csv file with scraped data
-	csvBuilder := NewCSVBuilder()
-	csvBuilder.
-		AddFileNameFromURL(pageURL).
-		AddFilePath(outputDir).
-		AddBodyAndSummary(body).
-		AddHeader(code, date).
-		BuildCSVFile()
+	BuildCSVFile(pageURL, outputDir, body, code, date)
 
 	log.Println("  end scrape: ", pageURL)
 }
