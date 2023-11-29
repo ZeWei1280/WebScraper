@@ -29,7 +29,7 @@ When you're executing this program, you can run it with command-line arguments t
 * `-outputDir` or `-o`
   * set the directory where the output csv files will be saved
   * default is `"./results"`
-* `-workers` or `-s`:
+* `-workers` or `-w`:
   * to set the number of go routines process at the same time
   * default is `1`
 ### Example
