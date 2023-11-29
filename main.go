@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	workingDir, outputDir, concurrency := ParseFlags()
+	workingDir, outputDir, numWorkers := ParseFlags()
 
 	logFile := setupLogging()
 	defer logFile.Close()
@@ -17,7 +17,7 @@ func main() {
 	server := StartLocalServer(workingDir)
 	defer server.Close()
 
-	VisitAndScrapePage(server.URL, outputDir, concurrency)
+	VisitAndScrapePage(server.URL, outputDir, numWorkers)
 }
 
 func StartLocalServer(workingDir string) *httptest.Server {

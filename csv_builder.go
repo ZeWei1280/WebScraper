@@ -21,8 +21,6 @@ type CSVBuilder struct {
 	header   string
 	body     string
 	formula  string
-	dataCols int
-	dataRows int
 }
 
 func BuildCSVFile(pageURL string, outputDir string, body [][]string, code []string, date []string) {
@@ -56,7 +54,6 @@ func (b *CSVBuilder) setHeader(code []string, date []string) {
 }
 
 func (b *CSVBuilder) setBody(body [][]string) {
-	b.body = ""
 	for _, row := range body {
 		b.body += b.separateData(row)
 	}
@@ -65,7 +62,7 @@ func (b *CSVBuilder) setBody(body [][]string) {
 func (b *CSVBuilder) build() {
 	f, _ := os.Create(b.filePath + ".csv")
 	defer f.Close()
-	blankRow := b.separateData(make([]string, b.dataCols))
+	blankRow := b.separateData(make([]string, 0))
 
 	fmt.Fprintf(f,
 		b.header+
@@ -74,7 +71,6 @@ func (b *CSVBuilder) build() {
 			blankRow+
 			b.body,
 	)
-
 }
 
 func (b *CSVBuilder) setFormula(totalRows int, totalCols int) {
@@ -91,11 +87,11 @@ func (b *CSVBuilder) setFormula(totalRows int, totalCols int) {
 	formula[3][0] = "pass rate"
 
 	// fill the data to formula table
-	for row := 0; row < 4; row++ {
+	for row := 0; row < len(formula); row++ {
 		for col := 0; col < totalCols; col++ {
 			tc := NewTableCell(row, col+1)
 			if tc.col == 1 {
-				// skip the formula name
+				// skip the formula name cell
 				continue
 			}
 			formulaRange := fmt.Sprintf("%s%d:%s%d", tc.cellId, rowStart, tc.cellId, rowEnd)

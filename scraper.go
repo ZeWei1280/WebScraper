@@ -9,11 +9,11 @@ import (
 	"github.com/gocolly/colly"
 )
 
-func VisitAndScrapePage(targetURL string, outputDir string, concurrency int) {
+func VisitAndScrapePage(targetURL string, outputDir string, numWorkers int) {
 	log.Println("Visit Web: ", targetURL)
 
 	wg := sync.WaitGroup{}
-	ch := make(chan struct{}, concurrency) // handle the number of go routines
+	ch := make(chan struct{}, numWorkers) // handle the number of go routines
 
 	// scrape all the hyperlinks from the main page, then visit all in parallel
 	c := colly.NewCollector()
@@ -54,7 +54,7 @@ func scrapeSubpage(pageURL string, outputDir string) {
 		e.ForEach("thead tr", func(_ int, h *colly.HTMLElement) {
 			h.ForEach("th", func(_ int, th *colly.HTMLElement) {
 				txt := strings.Fields(th.Text)
-				if len(txt) > 0 {
+				if len(txt) >= 3 {
 					code = append(code, txt[0])
 					date = append(date, txt[1]+" "+txt[2])
 				}
