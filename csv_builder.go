@@ -2,63 +2,60 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 )
 
-const alphabetLength = 26
-const rowStart = 9
+const (
+	alphabetLength = 26
+	rowStart       = 9
+	separator      = ";"
+)
 
 type CSVBuilder struct {
-	fileName  string
-	filePath  string
-	separator string
-	header    string
-	body      string
-	formula   string
-	dataCols  int
-	dataRows  int
+	fileName string
+	filePath string
+	header   string
+	body     string
+	formula  string
+	dataCols int
+	dataRows int
 }
 
 func NewCSVBuilder() *CSVBuilder {
 	return &CSVBuilder{}
 }
 
-func (b *CSVBuilder) SetSeparator(s string) *CSVBuilder {
-	b.separator = s
-	return b
-}
-
 func (b *CSVBuilder) AddFileNameFromURL(pageURL string) *CSVBuilder {
 	htmlFile := path.Base(pageURL)
-	filename := strings.TrimSuffix(htmlFile, ".html")
-	b.fileName = filename
+	b.fileName = strings.TrimSuffix(htmlFile, ".html")
 	return b
 }
 
 func (b *CSVBuilder) AddFilePath(outputDir string) *CSVBuilder {
-	os.MkdirAll(outputDir, os.ModePerm)
+	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		log.Fatalf("Fail to create directory %s: %v", outputDir, err)
+	}
 	b.filePath = filepath.Join(outputDir, b.fileName)
 	return b
 }
 
 func (b *CSVBuilder) AddHeader(code []string, date []string) *CSVBuilder {
 	b.header = fmt.Sprintf("%s%s\n%s%s\n",
-		b.separator, b.separateData(code),
-		b.separator, b.separateData(date))
+		separator, b.separateData(code),
+		separator, b.separateData(date))
 
 	return b
 }
 
 func (b *CSVBuilder) AddBodyAndSummary(body [][]string) *CSVBuilder {
-	var builder strings.Builder
+	b.body = ""
 	for _, row := range body {
-		builder.WriteString(b.separateData(row))
-		builder.WriteString("\n")
+		b.body += fmt.Sprintf("%s\n", b.separateData(row))
 	}
-	b.body = builder.String()
 
 	return b.addFormula(len(body), len(body[0]))
 }
@@ -109,7 +106,7 @@ func (b *CSVBuilder) addFormula(rows int, cols int) *CSVBuilder {
 }
 
 func (b *CSVBuilder) separateData(data []string) string {
-	return strings.Join(data, b.separator)
+	return strings.Join(data, separator)
 }
 
 func num2CSVColumn(num int) string {

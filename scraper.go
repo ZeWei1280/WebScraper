@@ -9,8 +9,8 @@ import (
 	"github.com/gocolly/colly"
 )
 
-func VisitAndScrapePage(targetUrl string, outputDir string, concurrency int) {
-	log.Println("Visit Web: ", targetUrl)
+func VisitAndScrapePage(targetURL string, outputDir string, concurrency int) {
+	log.Println("Visit Web: ", targetURL)
 
 	wg := sync.WaitGroup{}
 	ch := make(chan struct{}, concurrency) // handle the number of go routines
@@ -19,7 +19,7 @@ func VisitAndScrapePage(targetUrl string, outputDir string, concurrency int) {
 	c := colly.NewCollector()
 	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
-		subpage := fmt.Sprintf("%s/%s", targetUrl, link)
+		subpage := fmt.Sprintf("%s/%s", targetURL, link)
 
 		wg.Add(1)
 		ch <- struct{}{}
@@ -30,12 +30,11 @@ func VisitAndScrapePage(targetUrl string, outputDir string, concurrency int) {
 		}(subpage)
 	})
 
-	err := c.Visit(targetUrl)
-	if err != nil {
+	if err := c.Visit(targetURL); err != nil {
 		log.Fatal("Visit Web Error: ", err)
 	}
 	wg.Wait()
-	log.Println("Leave Web: ", targetUrl)
+	log.Println("Leave Web: ", targetURL)
 }
 
 func scrapeSubpage(pageURL string, outputDir string) {
@@ -76,15 +75,13 @@ func scrapeSubpage(pageURL string, outputDir string) {
 		})
 	})
 
-	err := c.Visit(pageURL)
-	if err != nil {
+	if err := c.Visit(pageURL); err != nil {
 		log.Fatal("Visit Error: ", err)
 	}
 
 	// build csv file with scraped data
 	csvBuilder := NewCSVBuilder()
 	csvBuilder.
-		SetSeparator(";").
 		AddFileNameFromURL(pageURL).
 		AddFilePath(outputDir).
 		AddBodyAndSummary(body).
@@ -98,15 +95,19 @@ func mapDataByAttr(attr string, rawData string) string {
 	var newData string
 
 	switch attr {
-	case "boardmodel text-ellipsis": // model name
+	// model name
+	case "boardmodel text-ellipsis":
 		newData = rawData
-	case "bucket cell-full bg-danger": // fail
+	// fail
+	case "bucket cell-full bg-danger":
 		newData = "x"
-	case "bucket cell-full ": // pass
+	// pass
+	case "bucket cell-full ":
 		if len(rawData) > 0 {
 			newData = "1"
 		}
-	default: // blank, ignore
+	// blank, ignore
+	default:
 		newData = ""
 	}
 
