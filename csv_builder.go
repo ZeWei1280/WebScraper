@@ -77,34 +77,63 @@ func (b *CSVBuilder) build() {
 
 }
 
-func (b *CSVBuilder) setFormula(rows int, cols int) *CSVBuilder {
-	var pass = make([]string, cols)
-	var fail = make([]string, cols)
-	var total = make([]string, cols)
-	var passRate = make([]string, cols)
-	pass[0] = "pass"
-	fail[0] = "failed"
-	total[0] = "total runs"
-	passRate[0] = "pass rate"
+func (b *CSVBuilder) setFormula(totalRows int, totalCols int) {
+	//var pass = make([]string, totalCols)
+	//var fail = make([]string, totalCols)
+	//var total = make([]string, totalCols)
+	//var passRate = make([]string, totalCols)
+	//pass[0] = "pass"
+	//fail[0] = "failed"
+	//total[0] = "total runs"
+	//passRate[0] = "pass rate"
+	//
+	//for i := 1; i < totalCols; i++ {
+	//	rowEnd := rowStart + totalRows - 1
+	//	col := num2CSVColumn(i + 1)
+	//	formulaRange := fmt.Sprintf("%s%d:%s%d", col, rowStart, col, rowEnd)
+	//
+	//	pass[i] = fmt.Sprintf("=SUM(%s)", formulaRange)
+	//	fail[i] = fmt.Sprintf(`=COUNTIF(%s,"x")`, formulaRange)
+	//	total[i] = fmt.Sprintf("=COUNTA(%s)", formulaRange)
+	//	passRate[i] = fmt.Sprintf(`=IF(%s6=0,"N/A",%s5/%s6)`, col, col, col)
+	//}
+	//
+	//b.formula =
+	//	b.separateData(fail) +
+	//		b.separateData(pass) +
+	//		b.separateData(total) +
+	//		b.separateData(passRate)
 
-	for i := 1; i < cols; i++ {
-		rowEnd := rowStart + rows - 1
-		col := num2CSVColumn(i + 1)
-		formulaRange := fmt.Sprintf("%s%d:%s%d", col, rowStart, col, rowEnd)
+	rowEnd := rowStart + totalRows - 1
 
-		pass[i] = fmt.Sprintf("=SUM(%s)", formulaRange)
-		fail[i] = fmt.Sprintf(`=COUNTIF(%s,"x")`, formulaRange)
-		total[i] = fmt.Sprintf("=COUNTA(%s)", formulaRange)
-		passRate[i] = fmt.Sprintf(`=IF(%s6=0,"N/A",%s5/%s6)`, col, col, col)
+	// initialize the formula table
+	var formula [][]string
+	for i := 0; i < 4; i++ {
+		formula = append(formula, make([]string, totalCols))
 	}
+	formula[0][0] = "fail"
+	formula[1][0] = "pass"
+	formula[2][0] = "total runs"
+	formula[3][0] = "pass rate"
 
-	b.formula =
-		b.separateData(fail) +
-			b.separateData(pass) +
-			b.separateData(total) +
-			b.separateData(passRate)
-
-	return b
+	// fill the data to formula table
+	for row := 0; row < 4; row++ {
+		for col := 0; col < totalCols; col++ {
+			tc := NewTableCell(row, col+1)
+			if tc.col == 1 {
+				// skip the formula name
+				continue
+			}
+			formulaRange := fmt.Sprintf("%s%d:%s%d", tc.cellId, rowStart, tc.cellId, rowEnd)
+			formula[0][col] = fmt.Sprintf(`=COUNTIF(%s,"x")`, formulaRange)
+			formula[1][col] = fmt.Sprintf("=SUM(%s)", formulaRange)
+			formula[2][col] = fmt.Sprintf("=COUNTA(%s)", formulaRange)
+			formula[3][col] = fmt.Sprintf(`=IF(%s6=0,"N/A",%s5/%s6)`, tc.cellId, tc.cellId, tc.cellId)
+		}
+	}
+	for _, row := range formula {
+		b.formula += b.separateData(row)
+	}
 }
 
 func (b *CSVBuilder) separateData(data []string) string {
@@ -117,13 +146,13 @@ type tableCell struct {
 	cellId string
 }
 
-//func NewTableCell(row int, col int) *tableCell {
-//	return &tableCell{
-//		row: row,
-//		col: col,
-//		cellId: num2CSVColumn(col),
-//	}
-//}
+func NewTableCell(row int, col int) *tableCell {
+	return &tableCell{
+		row:    row,
+		col:    col,
+		cellId: num2CSVColumn(col),
+	}
+}
 
 func num2CSVColumn(num int) string {
 	var res string
