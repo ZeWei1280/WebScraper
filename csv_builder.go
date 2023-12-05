@@ -11,7 +11,6 @@ import (
 
 const (
 	alphabetLength = 26
-	rowStart       = 9
 	separator      = ";"
 )
 
@@ -60,7 +59,10 @@ func (b *CSVBuilder) setBody(body [][]string) {
 }
 
 func (b *CSVBuilder) build() {
-	f, _ := os.Create(b.filePath + ".csv")
+	f, err := os.Create(b.filePath + ".csv")
+	if err != nil {
+		log.Fatal("Fail to build csv file: ", err)
+	}
 	defer f.Close()
 	blankRow := b.separateData(make([]string, 0))
 
@@ -73,36 +75,72 @@ func (b *CSVBuilder) build() {
 	)
 }
 
+type formula int
+
+const (
+	fails formula = iota
+	passes
+	runs
+	rate
+)
+
+var formulaNames = map[formula]string{
+	fails:  "fails",
+	passes: "passes",
+	runs:   "runs",
+	rate:   "rate",
+}
+
+func (f formula) name() string {
+	return formulaNames[f]
+}
+
+// The known row IDs, prefix: [rid] as in [row-id].
+type knownRowID int
+
+const (
+	_            knownRowID = iota // 0
+	_                              // 1
+	_                              // 2
+	_                              // 3
+	ridFails                       // 4
+	ridPasses                      // 5
+	ridRuns                        // 6
+	ridPassRate                    // 7
+	_                              // 8
+	ridDataStart                   // 9
+)
+
 func (b *CSVBuilder) setFormula(totalRows int, totalCols int) {
+	rowStart := int(ridDataStart)
 	rowEnd := rowStart + totalRows - 1
 
-	// initialize the formula table
-	var formula [][]string
-	for i := 0; i < 4; i++ {
-		formula = append(formula, make([]string, totalCols))
-	}
-	formula[0][0] = "fail"
-	formula[1][0] = "pass"
-	formula[2][0] = "total runs"
-	formula[3][0] = "pass rate"
-
-	// fill the data to formula table
-	for row := 0; row < len(formula); row++ {
-		for col := 0; col < totalCols; col++ {
-			tc := NewTableCell(row, col+1)
-			if tc.col == 1 {
-				// skip the formula name cell
+	for _, f := range []formula{fails, passes, runs, rate} {
+		var cells []string
+		for col := 1; col <= totalCols; col++ {
+			if col == 1 {
+				cells = append(cells, f.name())
 				continue
 			}
-			formulaRange := fmt.Sprintf("%s%d:%s%d", tc.cellId, rowStart, tc.cellId, rowEnd)
-			formula[0][col] = fmt.Sprintf(`=COUNTIF(%s,"x")`, formulaRange)
-			formula[1][col] = fmt.Sprintf("=SUM(%s)", formulaRange)
-			formula[2][col] = fmt.Sprintf("=COUNTA(%s)", formulaRange)
-			formula[3][col] = fmt.Sprintf(`=IF(%s6=0,"N/A",%s5/%s6)`, tc.cellId, tc.cellId, tc.cellId)
+
+			cellRange := fmt.Sprintf("%s:%s", NewTableCell(rowStart, col).id(), NewTableCell(rowEnd, col).id())
+			switch f {
+			case fails:
+				cells = append(cells, fmt.Sprintf(`=COUNTIF(%s,"x")`, cellRange))
+			case passes:
+				cells = append(cells, fmt.Sprintf("=SUM(%s)", cellRange))
+			case runs:
+				cells = append(cells, fmt.Sprintf("=COUNTA(%s)", cellRange))
+			case rate:
+				cells = append(cells,
+					fmt.Sprintf(`=IF(%[1]s=0,"N/A",%[2]s/%[1]s)`,
+						NewTableCell(int(ridRuns), col).id(),
+						NewTableCell(int(ridPasses), col).id(),
+					))
+			}
 		}
-	}
-	for _, row := range formula {
-		b.formula += b.separateData(row)
+
+		b.formula += b.separateData(cells)
 	}
 }
 
@@ -111,25 +149,28 @@ func (b *CSVBuilder) separateData(data []string) string {
 }
 
 type TableCell struct {
-	row    int
-	col    int
-	cellId string
+	row int
+	col int
+}
+
+func (cell *TableCell) id() string {
+	return fmt.Sprintf("%s%d", cell.colNumToID(), cell.row)
 }
 
 func NewTableCell(row int, col int) *TableCell {
 	return &TableCell{
-		row:    row,
-		col:    col,
-		cellId: num2CSVColumn(col),
+		row: row,
+		col: col,
 	}
 }
 
-func num2CSVColumn(num int) string {
+func (cell *TableCell) colNumToID() string {
 	var res string
-	for num > 0 {
-		mod := (num - 1) % alphabetLength
+	//Convert columns to cell IDs (from left to right)
+	for cell.col > 0 {
+		mod := (cell.col - 1) % alphabetLength
 		res = string(rune('A'+mod)) + res
-		num = (num - mod) / alphabetLength
+		cell.col = (cell.col - mod) / alphabetLength
 	}
 	return res
 }

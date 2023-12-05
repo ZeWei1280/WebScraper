@@ -9,11 +9,11 @@ import (
 	"github.com/gocolly/colly"
 )
 
-func VisitAndScrapePage(targetURL string, outputDir string, numWorkers int) {
+func VisitAndScrapePage(targetURL string, outputDir string, jobs int) {
 	log.Println("Visit Web: ", targetURL)
 
 	wg := sync.WaitGroup{}
-	ch := make(chan struct{}, numWorkers) // handle the number of go routines
+	ch := make(chan struct{}, jobs) // handle the number of go routines
 
 	// scrape all the hyperlinks from the main page, then visit all in parallel
 	c := colly.NewCollector()

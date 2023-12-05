@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	workingDir, outputDir, numWorkers := ParseFlags()
+	workingDir, outputDir, jobs := ParseFlags()
 
 	logFile := setupLogging()
 	defer logFile.Close()
@@ -17,7 +17,7 @@ func main() {
 	server := StartLocalServer(workingDir)
 	defer server.Close()
 
-	VisitAndScrapePage(server.URL, outputDir, numWorkers)
+	VisitAndScrapePage(server.URL, outputDir, jobs)
 }
 
 func StartLocalServer(workingDir string) *httptest.Server {
@@ -41,20 +41,22 @@ func setupLogging() *os.File {
 func ParseFlags() (string, string, int) {
 	var workingDir string
 	var outputDir string
-	var workers int
+	var jobs int
 
 	flag.StringVar(&outputDir, "o", "./results", "set the output .csv file directory")
 	flag.StringVar(&outputDir, "outputDir", "./results", "set the output .csv file directory")
 	flag.StringVar(&workingDir, "d", "./test data", "set the working directory")
 	flag.StringVar(&workingDir, "dir", "./test data", "set the working directory")
-	flag.IntVar(&workers, "w", 1, "number of goroutines to process files concurrently (100>=w>0)")
-	flag.IntVar(&workers, "workers", 1, "number of goroutines to process files concurrently (100>=w>0)")
+	flag.IntVar(&jobs, "w", 1, "number of goroutines to process files concurrently (100>=w>0)")
+	flag.IntVar(&jobs, "jobs", 1, "number of goroutines to process files concurrently (100>=w>0)")
 
 	flag.Parse()
-	if workers <= 0 {
-		workers = 1
-	} else if workers > 100 {
-		workers = 100
+	if jobs <= 0 {
+		// If the jobs parameter is less than or equal to 0, set it to 1 to ensure that at least one goroutine is processing
+		jobs = 1
+	} else if jobs > 100 {
+		// If the jobs parameter is greater than 100, limit it to the maximum value of 100 to prevent excessive concurrency
+		jobs = 100
 	}
-	return workingDir, outputDir, workers
+	return workingDir, outputDir, jobs
 }
